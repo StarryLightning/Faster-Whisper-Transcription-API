@@ -1,0 +1,35 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="appdirs" />
+          <option value="audioread" />
+          <option value="certifi" />
+          <option value="cffi" />
+          <option value="charset-normalizer" />
+          <option value="decorator" />
+          <option value="idna" />
+          <option value="importlib-metadata" />
+          <option value="joblib" />
+          <option value="librosa" />
+          <option value="llvmlite" />
+          <option value="numba" />
+          <option value="packaging" />
+          <option value="pooch" />
+          <option value="pycparser" />
+          <option value="pyparsing" />
+          <option value="requests" />
+          <option value="resampy" />
+          <option value="scikit-learn" />
+          <option value="scipy" />
+          <option value="SoundFile" />
+          <option value="threadpoolctl" />
+          <option value="urllib3" />
+          <option value="zipp" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
