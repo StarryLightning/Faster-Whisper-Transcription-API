@@ -4,7 +4,7 @@
 [https://img.shields.io/badge/FastAPI-0.100%252B-green](https://img.shields.io/badge/FastAPI-0.100%2B-green)
 https://img.shields.io/badge/License-MIT-yellow
 
-一个基于Faster-Whisper的高性能语音转录API服务，支持批量处理和长音频智能切片并行处理。
+一个基于Faster-Whisper和Audio Slicer的高性能语音转录API服务，支持批量处理和长音频智能切片并行处理。
 
 ## ✨ 特性
 
