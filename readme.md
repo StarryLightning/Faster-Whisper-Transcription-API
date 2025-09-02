@@ -138,6 +138,9 @@ SLICE_THRESHOLD = -40     # 静音检测阈值
 - [OpenAI Whisper](https://github.com/openai/whisper) - 语音识别模型
 - [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) - 高性能Whisper实现
 - [FastAPI](https://fastapi.tiangolo.com/) - 高性能Web框架
+- [Audio Slicer](https://github.com/openvpi/audio-slicer) - 智能音频切片工具，为长音频处理提供核心技术支持
+- [Librosa](https://librosa.org/) - 音频和音乐分析库
+- [PyDub](http://pydub.com/) - 音频处理库
 
 ## 📞 联系方式
 
