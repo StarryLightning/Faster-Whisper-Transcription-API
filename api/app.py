@@ -2,14 +2,12 @@
 from contextlib import asynccontextmanager
 import asyncio
 from fastapi import FastAPI
-from concurrent.futures import ThreadPoolExecutor
 
-from config.settings import DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE, MAX_WORKERS, MODELS_DIR
+from config.settings import DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE, MODELS_DIR
+from core.executor import executor
 from core.model_loader import get_model
 from api.endpoints import system, transcription
 
-# 全局线程池
-executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
