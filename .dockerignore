@@ -1,0 +1,17 @@
+# .dockerignore
+
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.git
+.gitignore
+README.md
+.env
+.venv
+venv/
+test/
+tests/
+.coverage
+pytest.ini

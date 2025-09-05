@@ -1,7 +1,7 @@
 # api/endpoints/system.py
 from fastapi import APIRouter
 from config.settings import SUPPORTED_MODELS, DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE, DEFAULT_BEAM_SIZE, \
-    MODELS_DIR, MAX_WORKERS, DEFAULT_MAX_CONCURRENT, MIN_CONCURRENT_LIMIT, MAX_CONCURRENT_LIMIT, AUDIO_SLICE_CONFIG, \
+    MODELS_DIR, DEFAULT_MAX_CONCURRENT, MIN_CONCURRENT_LIMIT, MAX_CONCURRENT_LIMIT, AUDIO_SLICE_CONFIG, \
     CONCURRENCY_CONFIG
 
 router = APIRouter(tags=["system"])
@@ -28,7 +28,6 @@ async def get_config():
         "default_compute_type": DEFAULT_COMPUTE_TYPE,
         "default_beam_size": DEFAULT_BEAM_SIZE,
         "models_directory": MODELS_DIR,
-        "max_workers": MAX_WORKERS,
         "batch_processing": {
             "default_max_concurrent": DEFAULT_MAX_CONCURRENT,
             "min_concurrent_limit": MIN_CONCURRENT_LIMIT,

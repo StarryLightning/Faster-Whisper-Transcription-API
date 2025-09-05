@@ -7,4 +7,5 @@ soundfile~=0.13.1
 huggingface-hub~=0.34.4
 pydantic~=2.11.7
 uvicorn~=0.35.0
+gunicorn>=21.0.0
 python-multipart~=0.0.20

@@ -1,3 +1,5 @@
+# core/processing_strategy.py
+
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
@@ -9,6 +11,9 @@ from core.slice_tools.merge_slice import merge_large_slices
 from core.slice_tools.process_slice import process_slice, aggregate_results
 from core.transcriber import transcribe_audio
 
+# 配置日志
+logging.basicConfig(level = logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def determine_processing_strategy(file_infos: List[dict], auto_slice: bool) -> str:
     # 确定最佳处理策略
@@ -79,7 +84,8 @@ async def process_batch_strategy(file_infos, model, beam_size, language, max_con
     return data
 
 
-async def process_slice_strategy(file_info, model, beam_size, language, max_concurrent, consider_system_load):
+async def process_slice_strategy(file_info, model, beam_size,
+                                 language, max_concurrent, consider_system_load):
     # 切片处理
     slice_infos = []
     try:
@@ -88,10 +94,10 @@ async def process_slice_strategy(file_info, model, beam_size, language, max_conc
             threshold=AUDIO_SLICE_CONFIG["threshold"],
             min_length=AUDIO_SLICE_CONFIG["min_slice_length"]
         )
-        logging.info(f"生成 {len(slice_infos)} 个音频切片")
+        logger.info(f"生成 {len(slice_infos)} 个音频切片")
 
         if len(slice_infos) > AUDIO_SLICE_CONFIG["max_total_slices"]:
-            logging.warning(f"切片数量过多！！！ ({len(slice_infos)})，进行优化合并")
+            logger.warning(f"切片数量过多！！！ ({len(slice_infos)})，进行优化合并")
             slice_infos = merge_large_slices(slice_infos, AUDIO_SLICE_CONFIG["max_total_slices"])
 
         # 动态计算并发数（如果用户没有指定）
@@ -99,8 +105,8 @@ async def process_slice_strategy(file_info, model, beam_size, language, max_conc
             max_concurrent = calculate_optimal_concurrency(len(slice_infos), file_info["duration"], consider_system_load)
             # 获取系统信息用于日志
             system_info = concurrency_optimizer.get_system_info()
-            logging.info(f"系统信息: {system_info}")
-            logging.info(f"自动计算最优并发数: {max_concurrent}")
+            logger.info(f"系统信息: {system_info}")
+            logger.info(f"自动计算最优并发数: {max_concurrent}")
 
         # 加载模型处理切片
 

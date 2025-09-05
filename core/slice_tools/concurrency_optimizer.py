@@ -1,10 +1,13 @@
 # core/concurrency_optimizer.py
+import logging
 import os
 import psutil
 import math
 from config.settings import CONCURRENCY_CONFIG
 
-
+# 配置日志
+logging.basicConfig(level = logging.INFO)
+logger = logging.getLogger(__name__)
 class ConcurrencyOptimizer:
     """并发优化器 - 智能计算最优并发数"""
 
@@ -39,14 +42,23 @@ class ConcurrencyOptimizer:
         # 4. 考虑系统当前负载（可选）
         if consider_system_load:
             load_based = self._calculate_load_based()
-            # 取更保守的值
-            cpu_based = min(cpu_based, load_based)
+        else:
+            load_based = cpu_based
 
-        # 5. 综合计算（取各种计算的最小值）
-        optimal = min(cpu_based, slice_based, duration_based, self.config["max_concurrent_limit"])
+        # 5. 综合计算 (取切片、时长、负载中的最大值)
+        soft_recommend = max(slice_based, duration_based, load_based)
+        # 6. 确保不大于cpu上限
+        hard_limit = min(cpu_based, self.config["max_concurrent_limit"])
 
-        # 6. 确保不低于最小值
+        optimal = min(hard_limit, soft_recommend)
         optimal = max(optimal, self.config["min_concurrent_limit"])
+
+        logger.debug(f"并发计算详情: "
+                     f"cpu_based={cpu_based}, "
+                     f"slice_based={slice_based}, "
+                     f"duration_based={duration_based}, "
+                     f"load_based={load_based}, "
+                     f"soft={soft_recommend}, hard={hard_limit}, 最终={optimal}")
 
         return optimal
 
@@ -64,25 +76,34 @@ class ConcurrencyOptimizer:
 
         if total_slices <= 5:
             return min(2, total_slices)  # 切片少时保守处理
-        elif total_slices <= 15:
+        elif total_slices <= 20:
             return min(4, math.ceil(total_slices / slices_per_thread))
         else:
-            return min(8, math.ceil(total_slices / (slices_per_thread * 1.5)))
+            return min(
+                self.config["max_concurrent_limit"],
+                math.ceil(total_slices / slices_per_thread)
+            )
 
     def _calculate_duration_based(self, audio_duration: float) -> int:
         """基于音频时长的计算（长音频优化）"""
         duration_minutes = audio_duration / 60
 
-        if duration_minutes <= 10:  # 10分钟以内
-            return 3
-        elif duration_minutes <= 30:  # 10-30分钟
-            return 4
-        elif duration_minutes <= 60:  # 30-60分钟
-            return 6
-        elif duration_minutes <= 120:  # 1-2小时
-            return 8
-        else:  # 2小时以上
-            return min(10, self.config["max_concurrent_limit"])
+        if duration_minutes > 60:
+            # 1小时以上：建议使用 70%~90% 的 CPU 核心
+            return min(
+                self.config["max_concurrent_limit"],
+                max(4, int(self.system_cores * 0.8))
+            )
+        elif duration_minutes > 30:
+            return min(
+                self.config["max_concurrent_limit"],
+                max(3, int(self.system_cores * 0.6))
+            )
+        else:
+            return min(
+                self.config["max_concurrent_limit"],
+                max(2, int(self.system_cores * 0.5))
+            )
 
     def _calculate_load_based(self) -> int:
         """基于系统当前负载的计算"""
