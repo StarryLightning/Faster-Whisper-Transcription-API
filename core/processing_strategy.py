@@ -4,7 +4,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
-from config.settings import ALLOWED_AUDIO_TYPES, DEFAULT_MAX_CONCURRENT, AUDIO_SLICE_CONFIG
+from config.settings import ALLOWED_AUDIO_TYPES, AUDIO_SLICE_CONFIG, CONCURRENCY_CONFIG
 from core.audio_slicer import slice_audio_file, cleanup_slices
 from core.slice_tools.concurrency_optimizer import calculate_optimal_concurrency, concurrency_optimizer
 from core.slice_tools.merge_slice import merge_large_slices
@@ -57,7 +57,7 @@ async def process_batch_strategy(file_infos, model, beam_size, language, max_con
             return {"filename": file_info["filename"], "transcript": None, "error": str(e), "duration": file_info["duration"]}
 
     results = []
-    effective_concurrent = max_concurrent or DEFAULT_MAX_CONCURRENT
+    effective_concurrent = max_concurrent or CONCURRENCY_CONFIG["default_max_concurrent"]
     effective_concurrent = min(effective_concurrent, len(valid_files))
 
     with ThreadPoolExecutor(max_workers = effective_concurrent) as batch_executor:
@@ -107,6 +107,9 @@ async def process_slice_strategy(file_info, model, beam_size,
             system_info = concurrency_optimizer.get_system_info()
             logger.info(f"系统信息: {system_info}")
             logger.info(f"自动计算最优并发数: {max_concurrent}")
+        else:
+            # ✅ 用户指定了，就用用户的，但不超过切片数
+            max_concurrent = min(max_concurrent, len(slice_infos))  # ← 新增：防止线程数 > 任务数
 
         # 加载模型处理切片
 
@@ -177,12 +180,14 @@ async def process_mixed_strategy(file_infos, model, beam_size,
     results = []
     # 并行处理短音频
     if short_audio:
+        # ✅ 传入 max_concurrent 控制短音频文件并发
         short_results = await process_batch_strategy(short_audio, model, beam_size, language, max_concurrent)
         if isinstance(short_results, dict) and "results" in short_results:
             results.extend(short_results["results"])
 
     # 串行处理长音频（避免资源竞争）
     for long_file in long_audio:
+        # ✅ 传入 max_concurrent 控制该长音频的切片并发
         long_result = await process_slice_strategy(long_file, model, beam_size, language, max_concurrent, consider_system_load)
         if isinstance(long_result, dict) and "results" in long_result and len(long_result["results"]) > 0:
             results.append(long_result["results"][0])

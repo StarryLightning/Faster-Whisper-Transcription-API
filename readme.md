@@ -44,10 +44,13 @@ bash
 ```
 # 开发模式（带热重载）
 uvicorn api.app:app --reload --host 0.0.0.0 --port 9898
+or
+python main.py
 
-# 生产模式（多工作进程）
-uvicorn api.app:app --host 0.0.0.0 --port 9898 --workers 2
+# 生产模式（使用docker部署）
+docker run -d -p 9898:9898 your-image
 ```
+⚠️docker默认配置为多核心工作站配置，请根据自己个人电脑的配置调整环境变量！！！
 
 ### API请求示例
 
@@ -56,11 +59,12 @@ uvicorn api.app:app --host 0.0.0.0 --port 9898 --workers 2
 bash
 
 ```
-curl -X POST "http://localhost:9898/api/v1/transcribe-batch" \
-  -F "files=@audio1.wav" \
-  -F "files=@audio2.mp3" \
-  -F "model_name=Systran/faster-whisper-small" \
-  -F "max_concurrent=4"
+curl -X 'POST' \
+  'http://localhost:9898/api/fasterwhisper/transcribe?model_name=faster-whisper-small&beam_size=5&device=cpu&compute_type=int8&auto_slice=true&consider_system_load=true' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: multipart/form-data' \
+    -F 'files=@Google_TTS–Blonde_on_Blonde-en-US-Wavenet-J.wav;type=audio/wav' \
+    -F 'files=@Wikipedia_-_2025_Canadian_boycott_of_the_United_States.mp3;type=audio/mpeg'
 ```
 
 **转录长音频文件（智能切片）**:
@@ -68,11 +72,11 @@ curl -X POST "http://localhost:9898/api/v1/transcribe-batch" \
 bash
 
 ```
-curl -X POST "http://localhost:9898/api/v1/transcribe-sliced" \
-  -F "file=@long_podcast.mp3" \
-  -F "model_name=Systran/faster-whisper-medium" \
-  -F "min_slice_length=30000" \
-  -F "slice_threshold=-35"
+curl -X 'POST' \
+  'http://localhost:9898/api/fasterwhisper/transcribe?model_name=faster-whisper-small&beam_size=5&device=cpu&compute_type=int8&auto_slice=true&consider_system_load=true' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'files=@De-Schallplatte_2-article.ogg;type=audio/ogg'
 ```
 
 ## 📚 API文档
@@ -84,41 +88,49 @@ curl -X POST "http://localhost:9898/api/v1/transcribe-sliced" \
 
 ### 主要端点
 
-| 端点                        | 方法 | 描述               |
-| :-------------------------- | :--- | :----------------- |
-| `/api/v1/transcribe-batch`  | POST | 批量转录音频文件   |
-| `/api/v1/transcribe-sliced` | POST | 智能切片转录长音频 |
-| `/health`                   | GET  | 服务健康检查       |
-| `/models`                   | GET  | 获取支持的模型列表 |
-| `/config`                   | GET  | 获取服务配置信息   |
+| 端点                                    | 方法 | 描述        |
+|:--------------------------------------| :--- |:----------|
+| `/api/fasterwhisper/transcribe-batch` | POST | 处理音频文件    |
+| `/health`                             | GET  | 服务健康检查    |
+| `/models`                             | GET  | 获取支持的模型列表 |
+| `/config`                             | GET  | 获取服务配置信息  |
 
 ## ⚙️ 配置选项
 
 在 `config/settings.py` 中修改配置：
 
-python
+【注意事项】
 
-```
-# 模型配置
-DEFAULT_MODEL = "Systran/faster-whisper-small"
-DEFAULT_DEVICE = "cpu"  # "cpu" 或 "cuda"
-DEFAULT_COMPUTE_TYPE = "int8"  # "float16", "float32", "int8"
+faster-whisper官方默认自动从站点下载模型，但由于个人网络环境或其他原因，自动下载模型并非一个方便的选择，所以请在使用时自行提前准备模型，确保本地已存放模型文件，并将模型文件夹名称填入settings.py中的SUPPORTED_MODELS配置项
 
-# 并发配置
-DEFAULT_MAX_CONCURRENT = 4
-MAX_CONCURRENT_LIMIT = 8
+示例： 
+SUPPORTED_MODELS = [
+    "faster-whisper-small",
+    "faster-whisper-large-v3-turbo",
+]
 
-# 音频切片配置
-MIN_SLICE_LENGTH = 30000  # 30秒
-SLICE_THRESHOLD = -40     # 静音检测阈值
+DEFAULT_MODEL = os.getenv("MODEL_NAME", "faster-whisper-small")
+
+DEFAULT_DEVICE = os.getenv("DEVICE", "cpu")
+
+DEFAULT_COMPUTE_TYPE = os.getenv("COMPUTE_TYPE", "int8")
+
+DEFAULT_BEAM_SIZE = _int_env("BEAM_SIZE", 5)
+
+MODELS_DIR = os.getenv("MODELS_DIR", "./Models")
+
+模型文件下载站点：https://huggingface.co/docs/hub/models-the-hub
+
+#
+
 ```
 
 ## 🚀 性能表现
 
 基于测试数据：
 
-- **普通处理**: 基础耗时
-- **切片并行处理**: 基础耗时 - 30秒（提升约30%）
+- **1h音频普通处理**: 约18min
+- **切片并行处理**: 约14min（提升约22%，吞吐量提升约28.6%）
 - **支持音频格式**: WAV、MP3、M4A、FLAC、OGG等
 
 ## 🤝 贡献指南

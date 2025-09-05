@@ -1,17 +1,18 @@
 # api/app.py
 import logging
 from contextlib import asynccontextmanager
-import asyncio
+
 from fastapi import FastAPI
 
 from config.settings import DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE, MODELS_DIR
 from core.MyThreadPool import executor
-from core.model_loader import get_model
 from api.endpoints import system, transcription
+from core.model_manager import get_cached_model, clear_model_cache
 
 # 配置日志
 logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger(__name__)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """服务生命周期管理"""
@@ -21,8 +22,7 @@ async def lifespan(app: FastAPI):
 
     try:
         # 预热默认模型
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(executor, get_model, DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE)
+        await get_cached_model(DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE)
         logger.info("✅ 默认模型预热加载完成！")
     except Exception as e:
         logger.warning(f"⚠️  模型预热失败: {e}。服务仍可启动，但首次请求可能会较慢。")
@@ -30,6 +30,13 @@ async def lifespan(app: FastAPI):
     yield  # 应用在此运行
 
     # shutdown
+    logger.info("🛑 服务关闭中，正在清理模型缓存...")
+    try:
+        clear_model_cache()
+        logger.info("✅ 模型缓存清理完成")
+    except Exception as e:
+        logger.warning(f"清理模型失败: {e}")
+
     logger.info("🛑 服务关闭中，正在关闭线程池...")
     executor.shutdown(wait=True)
     logger.info("✅ 线程池已安全关闭")
@@ -44,4 +51,4 @@ app = FastAPI(
 
 # 注册路由
 app.include_router(system.router)
-app.include_router(transcription.router, prefix="/api/v1")
+app.include_router(transcription.router, prefix="/api/fasterwhisper")

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import tempfile
@@ -8,9 +7,8 @@ import librosa
 from fastapi import APIRouter, UploadFile, File, Query
 
 from config.settings import SUPPORTED_MODELS, DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE, \
-    DEFAULT_BEAM_SIZE, MIN_CONCURRENT_LIMIT, MAX_CONCURRENT_LIMIT
-from core.MyThreadPool import executor
-from core.model_loader import get_model
+    DEFAULT_BEAM_SIZE, CONCURRENCY_CONFIG
+from core.model_manager import get_cached_model
 from core.processing_strategy import determine_processing_strategy, process_batch_strategy, process_slice_strategy, process_mixed_strategy
 from config.response_schema import ApiResponse
 
@@ -29,7 +27,10 @@ async def transcribe(
         compute_type: str = Query(DEFAULT_COMPUTE_TYPE, description="计算精度"),
         language: str = Query(None, description="指定语言代码（如zh、en），可选"),
         auto_slice: bool = Query(True, description="是否自动启用音频切片优化（处理多个长音频文件推荐关闭）"),
-        max_concurrent: int = Query(None, ge=MIN_CONCURRENT_LIMIT, le=MAX_CONCURRENT_LIMIT, description="最大并发处理数（推荐让系统自动计算）"),
+        max_concurrent: int = Query(None,
+                                    ge=CONCURRENCY_CONFIG["min_concurrent_limit"],
+                                    le=CONCURRENCY_CONFIG["max_concurrent_limit"],
+                                    description="最大并发处理数（推荐让系统自动计算）"),
         consider_system_load: bool = Query(True, description="是否考虑系统当前负载")
 ):
 
@@ -63,9 +64,8 @@ async def transcribe(
                     "requires_slicing": auto_slice and duration > 480  # 8分钟以上建议切片
                 })
 
-        # 预先加载模型
-        loop = asyncio.get_running_loop()
-        model = await loop.run_in_executor(executor, get_model, model_name, device, compute_type)
+        # 使用缓存的模型
+        model = await get_cached_model(model_name, device, compute_type)
 
         #智能路由决策
         processing_strategy = await determine_processing_strategy(file_infos, auto_slice)

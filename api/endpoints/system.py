@@ -1,8 +1,9 @@
 # api/endpoints/system.py
 from fastapi import APIRouter
 from config.settings import SUPPORTED_MODELS, DEFAULT_MODEL, DEFAULT_DEVICE, DEFAULT_COMPUTE_TYPE, DEFAULT_BEAM_SIZE, \
-    MODELS_DIR, DEFAULT_MAX_CONCURRENT, MIN_CONCURRENT_LIMIT, MAX_CONCURRENT_LIMIT, AUDIO_SLICE_CONFIG, \
+    MODELS_DIR, AUDIO_SLICE_CONFIG, \
     CONCURRENCY_CONFIG
+from core.model_manager import get_cached_model_names
 
 router = APIRouter(tags=["system"])
 
@@ -19,6 +20,20 @@ async def list_models():
     """返回当前服务支持的模型列表"""
     return {"available_models": SUPPORTED_MODELS}
 
+@router.get("/model-cache/status")
+async def get_model_cache_status():
+    """获取模型缓存状态"""
+    return {
+        "cached_models": get_cached_model_names(),
+        "cache_size": len(get_cached_model_names())
+    }
+
+@router.post("/model-cache/clear")
+async def clear_model_cache():
+    """清空模型缓存"""
+    clear_model_cache()
+    return {"message": "模型缓存已清空"}
+
 @router.get("/config")
 async def get_config():
     """返回当前服务配置"""
@@ -28,11 +43,6 @@ async def get_config():
         "default_compute_type": DEFAULT_COMPUTE_TYPE,
         "default_beam_size": DEFAULT_BEAM_SIZE,
         "models_directory": MODELS_DIR,
-        "batch_processing": {
-            "default_max_concurrent": DEFAULT_MAX_CONCURRENT,
-            "min_concurrent_limit": MIN_CONCURRENT_LIMIT,
-            "max_concurrent_limit": MAX_CONCURRENT_LIMIT
-        },
         "audio_slice_config": AUDIO_SLICE_CONFIG,
         "concurrency_config": CONCURRENCY_CONFIG
     }

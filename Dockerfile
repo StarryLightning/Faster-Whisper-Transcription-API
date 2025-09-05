@@ -19,10 +19,9 @@ COPY . .
 EXPOSE 9898
 
 CMD ["sh", "-c", "gunicorn -k uvicorn.workers.UvicornWorker \
-    -w ${WORKERS:-4} \
-    --threads 6 \
+    -w ${WORKERS:-18} \
     -b 0.0.0.0:${PORT:-9898} \
     --timeout 1800 \
     --keep-alive 100 \
     --preload \
-    main:app"]
+    api.app:app"]

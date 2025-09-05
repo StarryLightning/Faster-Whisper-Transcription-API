@@ -67,17 +67,28 @@ class ConcurrencyOptimizer:
         # 留出1-2个核心给系统和其他进程
         if self.system_cores <= 4:
             return max(1, self.system_cores - 1)  # 小核心系统保守一些
+        elif self.system_cores <= 8:
+            return max(2, self.system_cores - 2)  # 8核系统用6线程
+        elif self.system_cores <= 16:
+            return max(4, self.system_cores - 4)  # 16核系统用12线程
+        elif self.system_cores <= 32:
+            return max(8, self.system_cores - 8)  # 32核系统用24线程
         else:
-            return max(2, self.system_cores - 2)  # 大核心系统可以多分配一些
+            return min(32, int(self.system_cores * 0.75))  # 使用75%的核心
+
 
     def _calculate_slice_based(self, total_slices: int) -> int:
         """基于切片数量的计算"""
         slices_per_thread = self.config["slices_per_thread"]
 
         if total_slices <= 5:
-            return min(2, total_slices)  # 切片少时保守处理
+            return min(2, total_slices)
         elif total_slices <= 20:
-            return min(4, math.ceil(total_slices / slices_per_thread))
+            return min(8, math.ceil(total_slices / slices_per_thread))
+        elif total_slices <= 50:
+            return min(16, math.ceil(total_slices / slices_per_thread))
+        elif total_slices <= 100:
+            return min(24, math.ceil(total_slices / slices_per_thread))
         else:
             return min(
                 self.config["max_concurrent_limit"],
